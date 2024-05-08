@@ -40,7 +40,7 @@ use util::{
     ResultExt,
 };
 use uuid::Uuid;
-use vim::VimModeSetting;
+use vim::ModalEditorSetting;
 use welcome::BaseKeymap;
 use workspace::{
     create_and_open_local_file, notifications::simple_message_notification::MessageNotification,
@@ -633,18 +633,18 @@ pub fn handle_keymap_file_changes(
     cx: &mut AppContext,
 ) {
     BaseKeymap::register(cx);
-    VimModeSetting::register(cx);
+    ModalEditorSetting::register(cx);
 
     let (base_keymap_tx, mut base_keymap_rx) = mpsc::unbounded();
     let mut old_base_keymap = *BaseKeymap::get_global(cx);
-    let mut old_vim_enabled = VimModeSetting::get_global(cx).0;
+    let mut old_modal_editing_mode = *ModalEditorSetting::get_global(cx);
     cx.observe_global::<SettingsStore>(move |cx| {
         let new_base_keymap = *BaseKeymap::get_global(cx);
-        let new_vim_enabled = VimModeSetting::get_global(cx).0;
+        let new_modal_editing_mode = *ModalEditorSetting::get_global(cx);
 
-        if new_base_keymap != old_base_keymap || new_vim_enabled != old_vim_enabled {
+        if new_base_keymap != old_base_keymap || new_modal_editing_mode != old_modal_editing_mode {
             old_base_keymap = new_base_keymap;
-            old_vim_enabled = new_vim_enabled;
+            old_modal_editing_mode = new_modal_editing_mode;
             base_keymap_tx.unbounded_send(()).unwrap();
         }
     })
@@ -687,8 +687,10 @@ pub fn load_default_keymap(cx: &mut AppContext) {
     }
 
     KeymapFile::load_asset(DEFAULT_KEYMAP_PATH, cx).unwrap();
-    if VimModeSetting::get_global(cx).0 {
-        KeymapFile::load_asset("keymaps/vim.json", cx).unwrap();
+    match *ModalEditorSetting::get_global(cx) {
+        ModalEditorSetting::Vim => KeymapFile::load_asset("keymaps/vim.json", cx).unwrap(),
+        ModalEditorSetting::Helix => KeymapFile::load_asset("keymaps/helix.json", cx).unwrap(),
+        ModalEditorSetting::None => (),
     }
 
     if let Some(asset_path) = base_keymap.asset_path() {

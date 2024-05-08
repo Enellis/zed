@@ -57,7 +57,13 @@ impl VimTestContext {
     pub fn new_with_lsp(mut cx: EditorLspTestContext, enabled: bool) -> VimTestContext {
         cx.update(|cx| {
             cx.update_global(|store: &mut SettingsStore, cx| {
-                store.update_user_settings::<VimModeSetting>(cx, |s| *s = Some(enabled));
+                store.update_user_settings::<ModalEditorSetting>(cx, |s| {
+                    *s = Some(if enabled {
+                        ModalEditorSetting::Vim
+                    } else {
+                        ModalEditorSetting::None
+                    })
+                });
             });
             settings::KeymapFile::load_asset("keymaps/default-macos.json", cx).unwrap();
             if enabled {
@@ -105,7 +111,9 @@ impl VimTestContext {
     pub fn enable_vim(&mut self) {
         self.cx.update(|cx| {
             cx.update_global(|store: &mut SettingsStore, cx| {
-                store.update_user_settings::<VimModeSetting>(cx, |s| *s = Some(true));
+                store.update_user_settings::<ModalEditorSetting>(cx, |s| {
+                    *s = Some(ModalEditorSetting::Vim)
+                });
             });
         })
     }
@@ -113,7 +121,9 @@ impl VimTestContext {
     pub fn disable_vim(&mut self) {
         self.cx.update(|cx| {
             cx.update_global(|store: &mut SettingsStore, cx| {
-                store.update_user_settings::<VimModeSetting>(cx, |s| *s = Some(false));
+                store.update_user_settings::<ModalEditorSetting>(cx, |s| {
+                    *s = Some(ModalEditorSetting::None)
+                });
             });
         })
     }

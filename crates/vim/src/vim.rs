@@ -50,10 +50,16 @@ use workspace::{self, Workspace};
 
 use crate::state::ReplayableAction;
 
-/// Whether or not to enable Vim mode (work in progress).
+/// Which modal editing mode to use (work in progress).
 ///
-/// Default: false
-pub struct VimModeSetting(pub bool);
+/// Default: None
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+pub enum ModalEditorSetting {
+    #[default]
+    None,
+    Vim,
+    Helix,
+}
 
 /// An Action to Switch between modes
 #[derive(Clone, Deserialize, PartialEq)]
@@ -84,14 +90,14 @@ actions!(
 );
 
 // in the workspace namespace so it's not filtered out when vim is disabled.
-actions!(workspace, [ToggleVimMode]);
+actions!(workspace, [ToggleVimMode, ToggleHelixMode]);
 
 impl_actions!(vim, [SwitchMode, PushOperator, Number]);
 
 /// Initializes the `vim` crate.
 pub fn init(cx: &mut AppContext) {
     cx.set_global(Vim::default());
-    VimModeSetting::register(cx);
+    ModalEditorSetting::register(cx);
     VimSettings::register(cx);
 
     cx.observe_keystrokes(observe_keystrokes).detach();
@@ -107,11 +113,11 @@ pub fn init(cx: &mut AppContext) {
         filter.hide_namespace(Vim::NAMESPACE);
     });
     cx.update_global(|vim: &mut Vim, cx: &mut AppContext| {
-        vim.set_enabled(VimModeSetting::get_global(cx).0, cx)
+        vim.set_editor(*ModalEditorSetting::get_global(cx), cx)
     });
     cx.observe_global::<SettingsStore>(|cx| {
         cx.update_global(|vim: &mut Vim, cx: &mut AppContext| {
-            vim.set_enabled(VimModeSetting::get_global(cx).0, cx)
+            vim.set_editor(*ModalEditorSetting::get_global(cx), cx)
         });
     })
     .detach();
@@ -140,9 +146,23 @@ fn register(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) {
 
     workspace.register_action(|workspace: &mut Workspace, _: &ToggleVimMode, cx| {
         let fs = workspace.app_state().fs.clone();
-        let currently_enabled = VimModeSetting::get_global(cx).0;
-        update_settings_file::<VimModeSetting>(fs, cx, move |setting| {
-            *setting = Some(!currently_enabled)
+        let current_mode = *ModalEditorSetting::get_global(cx);
+        update_settings_file::<ModalEditorSetting>(fs, cx, move |setting| {
+            *setting = Some(match current_mode {
+                ModalEditorSetting::Vim => ModalEditorSetting::None,
+                _ => ModalEditorSetting::Vim,
+            })
+        })
+    });
+
+    workspace.register_action(|workspace: &mut Workspace, _: &ToggleHelixMode, cx| {
+        let fs = workspace.app_state().fs.clone();
+        let current_mode = *ModalEditorSetting::get_global(cx);
+        update_settings_file::<ModalEditorSetting>(fs, cx, move |setting| {
+            *setting = Some(match current_mode {
+                ModalEditorSetting::Helix => ModalEditorSetting::None,
+                _ => ModalEditorSetting::Helix,
+            })
         })
     });
 
@@ -216,7 +236,7 @@ fn observe_keystrokes(keystroke_event: &KeystrokeEvent, cx: &mut WindowContext) 
 struct Vim {
     active_editor: Option<WeakView<Editor>>,
     editor_subscription: Option<Subscription>,
-    enabled: bool,
+    modal_editor: ModalEditorSetting,
     editor_states: HashMap<EntityId, EditorState>,
     workspace_state: WorkspaceState,
     default_state: EditorState,
@@ -742,11 +762,11 @@ impl Vim {
         }
     }
 
-    fn set_enabled(&mut self, enabled: bool, cx: &mut AppContext) {
-        if self.enabled == enabled {
+    fn set_editor(&mut self, modal_editor: ModalEditorSetting, cx: &mut AppContext) {
+        if self.modal_editor == modal_editor {
             return;
         }
-        if !enabled {
+        if modal_editor == ModalEditorSetting::None {
             CommandPaletteInterceptor::update_global(cx, |interceptor, _| {
                 interceptor.clear();
             });
@@ -757,7 +777,7 @@ impl Vim {
             return;
         }
 
-        self.enabled = true;
+        self.modal_editor = modal_editor;
         CommandPaletteFilter::update_global(cx, |filter, _| {
             filter.show_namespace(Self::NAMESPACE);
         });
@@ -836,15 +856,16 @@ impl Vim {
     }
 }
 
-impl Settings for VimModeSetting {
-    const KEY: Option<&'static str> = Some("vim_mode");
+impl Settings for ModalEditorSetting {
+    const KEY: Option<&'static str> = Some("modal_editing_mode");
 
-    type FileContent = Option<bool>;
+    type FileContent = Option<Self>;
 
     fn load(sources: SettingsSources<Self::FileContent>, _: &mut AppContext) -> Result<Self> {
-        Ok(Self(sources.user.copied().flatten().unwrap_or(
-            sources.default.ok_or_else(Self::missing_default)?,
-        )))
+        if let Some(Some(user_value)) = sources.user.copied() {
+            return Ok(user_value);
+        }
+        sources.default.ok_or_else(Self::missing_default)
     }
 }
 

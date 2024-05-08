@@ -1,7 +1,7 @@
 use gpui::{div, Element, Render, Subscription, ViewContext};
 use workspace::{item::ItemHandle, ui::prelude::*, StatusItemView};
 
-use crate::{state::Mode, Vim};
+use crate::{state::Mode, ModalEditorSetting, Vim};
 
 /// The ModeIndicator displays the current mode in the status bar.
 pub struct ModeIndicator {
@@ -29,7 +29,7 @@ impl ModeIndicator {
             return;
         };
 
-        if vim.enabled {
+        if vim.modal_editor != ModalEditorSetting::None {
             self.mode = Some(vim.state().mode);
             self.operators = self.current_operators_description(&vim);
         } else {

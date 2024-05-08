@@ -11,7 +11,7 @@ use gpui::{
 use settings::{Settings, SettingsStore};
 use std::sync::Arc;
 use ui::{prelude::*, CheckboxWithLabel};
-use vim::VimModeSetting;
+use vim::ModalEditorSetting;
 use workspace::{
     dock::DockPosition,
     item::{Item, ItemEvent, TabContentParams},
@@ -167,7 +167,7 @@ impl Render for WelcomePage {
                             .child(CheckboxWithLabel::new(
                                 "enable-vim",
                                 Label::new("Enable vim mode"),
-                                if VimModeSetting::get_global(cx).0 {
+                                if *ModalEditorSetting::get_global(cx) == ModalEditorSetting::Vim {
                                     ui::Selection::Selected
                                 } else {
                                     ui::Selection::Unselected
@@ -175,10 +175,16 @@ impl Render for WelcomePage {
                                 cx.listener(move |this, selection, cx| {
                                     this.telemetry
                                         .report_app_event("welcome page: toggle vim".to_string());
-                                    this.update_settings::<VimModeSetting>(
+                                    this.update_settings::<ModalEditorSetting>(
                                         selection,
                                         cx,
-                                        |setting, value| *setting = Some(value),
+                                        |setting, value| {
+                                            *setting = Some(if value {
+                                                ModalEditorSetting::Vim
+                                            } else {
+                                                ModalEditorSetting::None
+                                            })
+                                        },
                                     );
                                 }),
                             ))

@@ -1,4 +1,4 @@
-use crate::{insert::NormalBefore, Vim, VimModeSetting};
+use crate::{insert::NormalBefore, ModalEditorSetting, Vim};
 use editor::{Editor, EditorEvent};
 use gpui::{
     Action, AppContext, BorrowAppContext, Entity, EntityId, View, ViewContext, WindowContext,
@@ -15,11 +15,11 @@ pub fn init(cx: &mut AppContext) {
         })
         .detach();
 
-        let mut enabled = VimModeSetting::get_global(cx).0;
+        let mut modal_editing_mode = *ModalEditorSetting::get_global(cx);
         cx.observe_global::<SettingsStore>(move |editor, cx| {
-            if VimModeSetting::get_global(cx).0 != enabled {
-                enabled = VimModeSetting::get_global(cx).0;
-                if !enabled {
+            if *ModalEditorSetting::get_global(cx) != modal_editing_mode {
+                modal_editing_mode = *ModalEditorSetting::get_global(cx);
+                if modal_editing_mode == ModalEditorSetting::None {
                     Vim::unhook_vim_settings(editor, cx);
                 }
             }
@@ -33,7 +33,7 @@ pub fn init(cx: &mut AppContext) {
 }
 fn focused(editor: View<Editor>, cx: &mut WindowContext) {
     Vim::update(cx, |vim, cx| {
-        if !vim.enabled {
+        if vim.modal_editor == ModalEditorSetting::None {
             return;
         }
         vim.activate_editor(editor.clone(), cx);
@@ -42,7 +42,7 @@ fn focused(editor: View<Editor>, cx: &mut WindowContext) {
 
 fn blurred(editor: View<Editor>, cx: &mut WindowContext) {
     Vim::update(cx, |vim, cx| {
-        if !vim.enabled {
+        if vim.modal_editor == ModalEditorSetting::None {
             return;
         }
         if let Some(previous_editor) = vim.active_editor.clone() {
