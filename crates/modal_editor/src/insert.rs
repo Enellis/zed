@@ -1,4 +1,4 @@
-use crate::{normal::repeat, state::Mode, Vim};
+use crate::{normal::repeat, state::Mode, vim::Vim};
 use editor::{scroll::Autoscroll, Bias};
 use gpui::{actions, Action, ViewContext};
 use language::SelectionGoal;

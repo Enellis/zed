@@ -3,7 +3,7 @@ use gpui::{actions, ViewContext, WindowContext};
 use language::Point;
 use workspace::Workspace;
 
-use crate::{motion::Motion, utils::copy_selections_content, Mode, Vim};
+use crate::{motion::Motion, utils::copy_selections_content, vim::Vim, Mode};
 
 actions!(vim, [Substitute, SubstituteLine]);
 

@@ -12,7 +12,7 @@ use crate::{
         JoinLines,
     },
     state::Mode,
-    Vim,
+    vim::Vim,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]

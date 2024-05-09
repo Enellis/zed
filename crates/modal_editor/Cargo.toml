@@ -9,7 +9,7 @@ license = "GPL-3.0-or-later"
 workspace = true
 
 [lib]
-path = "src/vim.rs"
+path = "src/modal_editor.rs"
 doctest = false
 
 [features]

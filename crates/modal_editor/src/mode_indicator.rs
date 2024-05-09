@@ -1,7 +1,7 @@
 use gpui::{div, Element, Render, Subscription, ViewContext};
 use workspace::{item::ItemHandle, ui::prelude::*, StatusItemView};
 
-use crate::{state::Mode, Vim};
+use crate::{state::Mode, vim::Vim};
 
 /// The ModeIndicator displays the current mode in the status bar.
 pub struct ModeIndicator {

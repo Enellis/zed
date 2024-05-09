@@ -1,7 +1,7 @@
 use crate::{
     motion::{self},
     state::Mode,
-    Vim,
+    vim::Vim,
 };
 use editor::{display_map::ToDisplayPoint, Bias, ToPoint};
 use gpui::{actions, ViewContext, WindowContext};

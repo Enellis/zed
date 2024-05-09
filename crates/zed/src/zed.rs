@@ -33,7 +33,7 @@ use task::static_source::{StaticSource, TrackedFile};
 use theme::ActiveTheme;
 use workspace::notifications::NotificationId;
 
-use modal_editor::VimModeSetting;
+use modal_editor::ModalEditorMethodSetting;
 use terminal_view::terminal_panel::{self, TerminalPanel};
 use util::{
     asset_str,
@@ -137,7 +137,7 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut AppContext) {
             activity_indicator::ActivityIndicator::new(workspace, app_state.languages.clone(), cx);
         let active_buffer_language =
             cx.new_view(|_| language_selector::ActiveBufferLanguage::new(workspace));
-        let vim_mode_indicator = cx.new_view(|cx| modal_editor::ModeIndicator::new(cx));
+        let modal_editor_mode_indicator = cx.new_view(|cx| modal_editor::ModeIndicator::new(cx));
         let cursor_position =
             cx.new_view(|_| go_to_line::cursor_position::CursorPosition::new(workspace));
         workspace.status_bar().update(cx, |status_bar, cx| {
@@ -145,7 +145,7 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut AppContext) {
             status_bar.add_left_item(activity_indicator, cx);
             status_bar.add_right_item(inline_completion_button, cx);
             status_bar.add_right_item(active_buffer_language, cx);
-            status_bar.add_right_item(vim_mode_indicator, cx);
+            status_bar.add_right_item(modal_editor_mode_indicator, cx);
             status_bar.add_right_item(cursor_position, cx);
         });
 
@@ -633,18 +633,19 @@ pub fn handle_keymap_file_changes(
     cx: &mut AppContext,
 ) {
     BaseKeymap::register(cx);
-    VimModeSetting::register(cx);
+    ModalEditorMethodSetting::register(cx);
 
     let (base_keymap_tx, mut base_keymap_rx) = mpsc::unbounded();
     let mut old_base_keymap = *BaseKeymap::get_global(cx);
-    let mut old_vim_enabled = VimModeSetting::get_global(cx).0;
+    let mut old_modal_editor_method = *ModalEditorMethodSetting::get_global(cx);
     cx.observe_global::<SettingsStore>(move |cx| {
         let new_base_keymap = *BaseKeymap::get_global(cx);
-        let new_vim_enabled = VimModeSetting::get_global(cx).0;
+        let new_modal_editor_method = *ModalEditorMethodSetting::get_global(cx);
 
-        if new_base_keymap != old_base_keymap || new_vim_enabled != old_vim_enabled {
+        if new_base_keymap != old_base_keymap || new_modal_editor_method != old_modal_editor_method
+        {
             old_base_keymap = new_base_keymap;
-            old_vim_enabled = new_vim_enabled;
+            old_modal_editor_method = new_modal_editor_method;
             base_keymap_tx.unbounded_send(()).unwrap();
         }
     })
@@ -687,8 +688,9 @@ pub fn load_default_keymap(cx: &mut AppContext) {
     }
 
     KeymapFile::load_asset(DEFAULT_KEYMAP_PATH, cx).unwrap();
-    if VimModeSetting::get_global(cx).0 {
-        KeymapFile::load_asset("keymaps/vim.json", cx).unwrap();
+    match *ModalEditorMethodSetting::get_global(cx) {
+        ModalEditorMethodSetting::Vim => KeymapFile::load_asset("keymaps/vim.json", cx).unwrap(),
+        _ => (),
     }
 
     if let Some(asset_path) = base_keymap.asset_path() {

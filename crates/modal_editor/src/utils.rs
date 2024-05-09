@@ -6,7 +6,7 @@ use language::{CharKind, Point};
 use multi_buffer::MultiBufferRow;
 use settings::Settings;
 
-use crate::{state::Mode, UseSystemClipboard, Vim, VimSettings};
+use crate::{state::Mode, vim::UseSystemClipboard, vim::Vim, vim::VimSettings};
 
 pub struct HighlightOnYank;
 

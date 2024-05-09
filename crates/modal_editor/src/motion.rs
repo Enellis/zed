@@ -18,8 +18,8 @@ use crate::{
     state::{Mode, Operator},
     surrounds::SurroundsType,
     utils::coerce_punctuation,
+    vim::Vim,
     visual::visual_motion,
-    Vim,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

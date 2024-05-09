@@ -2,8 +2,8 @@ use crate::{
     insert::NormalBefore,
     motion::Motion,
     state::{Mode, RecordedSelection, ReplayableAction},
+    vim::Vim,
     visual::visual_motion,
-    Vim,
 };
 use gpui::{actions, Action, ViewContext, WindowContext};
 use workspace::Workspace;

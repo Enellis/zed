@@ -11,7 +11,7 @@ use crate::{
     motion::{search_motion, Motion},
     normal::move_cursor,
     state::{Mode, SearchState},
-    Vim,
+    vim::Vim,
 };
 
 #[derive(Clone, Deserialize, PartialEq)]

@@ -10,7 +10,10 @@ use serde::Deserialize;
 use settings::Settings;
 use workspace::Workspace;
 
-use crate::{state::Mode, utils::copy_selections_content, UseSystemClipboard, Vim, VimSettings};
+use crate::{
+    state::Mode, utils::copy_selections_content, vim::UseSystemClipboard, vim::Vim,
+    vim::VimSettings,
+};
 
 #[derive(Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -230,7 +233,8 @@ mod test {
     use crate::{
         state::Mode,
         test::{NeovimBackedTestContext, VimTestContext},
-        UseSystemClipboard, VimSettings,
+        vim::UseSystemClipboard,
+        vim::VimSettings,
     };
     use gpui::ClipboardItem;
     use indoc::indoc;

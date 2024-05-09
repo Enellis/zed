@@ -12,7 +12,7 @@ pub struct VimTestContext {
 
 impl VimTestContext {
     pub fn init(cx: &mut gpui::TestAppContext) {
-        if cx.has_global::<Vim>() {
+        if cx.has_global::<vim::Vim>() {
             return;
         }
         cx.update(|cx| {
@@ -57,7 +57,7 @@ impl VimTestContext {
     pub fn new_with_lsp(mut cx: EditorLspTestContext, enabled: bool) -> VimTestContext {
         cx.update(|cx| {
             cx.update_global(|store: &mut SettingsStore, cx| {
-                store.update_user_settings::<VimModeSetting>(cx, |s| *s = Some(enabled));
+                store.update_user_settings::<vim::VimModeSetting>(cx, |s| *s = Some(enabled));
             });
             settings::KeymapFile::load_asset("keymaps/default-macos.json", cx).unwrap();
             if enabled {
@@ -105,7 +105,7 @@ impl VimTestContext {
     pub fn enable_vim(&mut self) {
         self.cx.update(|cx| {
             cx.update_global(|store: &mut SettingsStore, cx| {
-                store.update_user_settings::<VimModeSetting>(cx, |s| *s = Some(true));
+                store.update_user_settings::<vim::VimModeSetting>(cx, |s| *s = Some(true));
             });
         })
     }
@@ -113,25 +113,30 @@ impl VimTestContext {
     pub fn disable_vim(&mut self) {
         self.cx.update(|cx| {
             cx.update_global(|store: &mut SettingsStore, cx| {
-                store.update_user_settings::<VimModeSetting>(cx, |s| *s = Some(false));
+                store.update_user_settings::<vim::VimModeSetting>(cx, |s| *s = Some(false));
             });
         })
     }
 
     pub fn mode(&mut self) -> Mode {
-        self.cx.read(|cx| cx.global::<Vim>().state().mode)
+        self.cx.read(|cx| cx.global::<vim::Vim>().state().mode)
     }
 
     pub fn active_operator(&mut self) -> Option<Operator> {
-        self.cx
-            .read(|cx| cx.global::<Vim>().state().operator_stack.last().cloned())
+        self.cx.read(|cx| {
+            cx.global::<vim::Vim>()
+                .state()
+                .operator_stack
+                .last()
+                .cloned()
+        })
     }
 
     pub fn set_state(&mut self, text: &str, mode: Mode) {
         let window = self.window;
         self.cx.set_state(text);
         self.update_window(window, |_, cx| {
-            Vim::update(cx, |vim, cx| {
+            vim::Vim::update(cx, |vim, cx| {
                 vim.switch_mode(mode, true, cx);
             })
         })

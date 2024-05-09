@@ -5,7 +5,8 @@ use multi_buffer::MultiBufferRow;
 use workspace::Workspace;
 
 use crate::{
-    normal::ChangeCase, normal::ConvertToLowerCase, normal::ConvertToUpperCase, state::Mode, Vim,
+    normal::ChangeCase, normal::ConvertToLowerCase, normal::ConvertToUpperCase, state::Mode,
+    vim::Vim,
 };
 
 pub fn change_case(_: &mut Workspace, _: &ChangeCase, cx: &mut ViewContext<Workspace>) {

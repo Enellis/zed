@@ -1,4 +1,4 @@
-use crate::{motion::Motion, object::Object, utils::yank_selections_content, Vim};
+use crate::{motion::Motion, object::Object, utils::yank_selections_content, vim::Vim};
 use collections::HashMap;
 use gpui::WindowContext;
 

@@ -1,21 +1,7 @@
 //! Vim support for Zed.
+#![allow(unused)]
 
-#[cfg(test)]
-mod test;
-
-mod change_list;
-mod command;
-mod editor_events;
-mod insert;
-mod mode_indicator;
-mod motion;
-mod normal;
-mod object;
-mod replace;
-mod state;
-mod surrounds;
-mod utils;
-mod visual;
+use crate::*;
 
 use anyhow::Result;
 use change_list::push_to_change_list;
@@ -30,7 +16,7 @@ use gpui::{
     Subscription, View, ViewContext, WeakView, WindowContext,
 };
 use language::{CursorShape, Point, SelectionGoal, TransactionId};
-pub use mode_indicator::ModeIndicator;
+
 use motion::Motion;
 use normal::{
     mark::{create_mark, create_mark_after, create_mark_before},
@@ -213,13 +199,13 @@ fn observe_keystrokes(keystroke_event: &KeystrokeEvent, cx: &mut WindowContext) 
 
 /// The state pertaining to Vim mode.
 #[derive(Default)]
-struct Vim {
-    active_editor: Option<WeakView<Editor>>,
-    editor_subscription: Option<Subscription>,
-    enabled: bool,
-    editor_states: HashMap<EntityId, EditorState>,
-    workspace_state: WorkspaceState,
-    default_state: EditorState,
+pub struct Vim {
+    pub active_editor: Option<WeakView<Editor>>,
+    pub editor_subscription: Option<Subscription>,
+    pub enabled: bool,
+    pub editor_states: HashMap<EntityId, EditorState>,
+    pub workspace_state: WorkspaceState,
+    pub default_state: EditorState,
 }
 
 impl Global for Vim {}
@@ -228,18 +214,18 @@ impl Vim {
     /// The namespace for Vim actions.
     const NAMESPACE: &'static str = "vim";
 
-    fn read(cx: &mut AppContext) -> &Self {
+    pub fn read(cx: &mut AppContext) -> &Self {
         cx.global::<Self>()
     }
 
-    fn update<F, S>(cx: &mut WindowContext, update: F) -> S
+    pub fn update<F, S>(cx: &mut WindowContext, update: F) -> S
     where
         F: FnOnce(&mut Self, &mut WindowContext) -> S,
     {
         cx.update_global(update)
     }
 
-    fn activate_editor(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
+    pub fn activate_editor(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
         if !editor.read(cx).use_modal_editing() {
             return;
         }
@@ -287,7 +273,7 @@ impl Vim {
         self.sync_vim_settings(cx);
     }
 
-    fn record_insertion(
+    pub fn record_insertion(
         text: &Arc<str>,
         range_to_replace: Option<Range<isize>>,
         cx: &mut WindowContext,
@@ -308,7 +294,7 @@ impl Vim {
         });
     }
 
-    fn update_active_editor<S>(
+    pub fn update_active_editor<S>(
         &mut self,
         cx: &mut WindowContext,
         update: impl FnOnce(&mut Vim, &mut Editor, &mut ViewContext<Editor>) -> S,
@@ -317,7 +303,7 @@ impl Vim {
         Some(editor.update(cx, |editor, cx| update(self, editor, cx)))
     }
 
-    fn editor_selections(&mut self, cx: &mut WindowContext) -> Vec<Range<Anchor>> {
+    pub fn editor_selections(&mut self, cx: &mut WindowContext) -> Vec<Range<Anchor>> {
         self.update_active_editor(cx, |_, editor, _| {
             editor
                 .selections
@@ -408,7 +394,7 @@ impl Vim {
         self.stop_recording();
     }
 
-    fn switch_mode(&mut self, mode: Mode, leave_selections: bool, cx: &mut WindowContext) {
+    pub fn switch_mode(&mut self, mode: Mode, leave_selections: bool, cx: &mut WindowContext) {
         let state = self.state();
         let last_mode = state.mode;
         let prior_mode = state.last_mode;
@@ -498,7 +484,7 @@ impl Vim {
         });
     }
 
-    fn push_count_digit(&mut self, number: usize, cx: &mut WindowContext) {
+    pub fn push_count_digit(&mut self, number: usize, cx: &mut WindowContext) {
         if self.active_operator().is_some() {
             self.update_state(|state| {
                 state.post_count = Some(state.post_count.unwrap_or(0) * 10 + number)
@@ -512,7 +498,7 @@ impl Vim {
         self.sync_vim_settings(cx)
     }
 
-    fn take_count(&mut self, cx: &mut WindowContext) -> Option<usize> {
+    pub fn take_count(&mut self, cx: &mut WindowContext) -> Option<usize> {
         if self.workspace_state.replaying {
             return self.workspace_state.recorded_count;
         }
@@ -531,7 +517,7 @@ impl Vim {
         count
     }
 
-    fn push_operator(&mut self, operator: Operator, cx: &mut WindowContext) {
+    pub fn push_operator(&mut self, operator: Operator, cx: &mut WindowContext) {
         if matches!(
             operator,
             Operator::Change | Operator::Delete | Operator::Replace
@@ -553,28 +539,28 @@ impl Vim {
         self.sync_vim_settings(cx);
     }
 
-    fn maybe_pop_operator(&mut self) -> Option<Operator> {
+    pub fn maybe_pop_operator(&mut self) -> Option<Operator> {
         self.update_state(|state| state.operator_stack.pop())
     }
 
-    fn pop_operator(&mut self, cx: &mut WindowContext) -> Operator {
+    pub fn pop_operator(&mut self, cx: &mut WindowContext) -> Operator {
         let popped_operator = self.update_state(|state| state.operator_stack.pop())
             .expect("Operator popped when no operator was on the stack. This likely means there is an invalid keymap config");
         self.sync_vim_settings(cx);
         popped_operator
     }
 
-    fn clear_operator(&mut self, cx: &mut WindowContext) {
+    pub fn clear_operator(&mut self, cx: &mut WindowContext) {
         self.take_count(cx);
         self.update_state(|state| state.operator_stack.clear());
         self.sync_vim_settings(cx);
     }
 
-    fn active_operator(&self) -> Option<Operator> {
+    pub fn active_operator(&self) -> Option<Operator> {
         self.state().operator_stack.last().cloned()
     }
 
-    fn transaction_begun(&mut self, transaction_id: TransactionId, _: &mut WindowContext) {
+    pub fn transaction_begun(&mut self, transaction_id: TransactionId, _: &mut WindowContext) {
         self.update_state(|state| {
             let mode = if (state.mode == Mode::Insert
                 || state.mode == Mode::Replace
@@ -592,7 +578,7 @@ impl Vim {
         });
     }
 
-    fn transaction_undone(&mut self, transaction_id: &TransactionId, cx: &mut WindowContext) {
+    pub fn transaction_undone(&mut self, transaction_id: &TransactionId, cx: &mut WindowContext) {
         if !self.state().mode.is_visual() {
             return;
         };
@@ -622,11 +608,11 @@ impl Vim {
         self.switch_mode(Mode::Normal, true, cx)
     }
 
-    fn transaction_ended(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
+    pub fn transaction_ended(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
         push_to_change_list(self, editor, cx)
     }
 
-    fn local_selections_changed(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
+    pub fn local_selections_changed(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
         let newest = editor.read(cx).selections.newest_anchor().clone();
         let is_multicursor = editor.read(cx).selections.count() > 1;
 
@@ -663,7 +649,7 @@ impl Vim {
         }
     }
 
-    fn active_editor_input_ignored(text: Arc<str>, cx: &mut WindowContext) {
+    pub fn active_editor_input_ignored(text: Arc<str>, cx: &mut WindowContext) {
         if text.is_empty() {
             return;
         }
@@ -742,7 +728,7 @@ impl Vim {
         }
     }
 
-    fn set_enabled(&mut self, enabled: bool, cx: &mut AppContext) {
+    pub fn set_enabled(&mut self, enabled: bool, cx: &mut AppContext) {
         if self.enabled == enabled {
             return;
         }
@@ -804,7 +790,7 @@ impl Vim {
         ret
     }
 
-    fn sync_vim_settings(&mut self, cx: &mut WindowContext) {
+    pub fn sync_vim_settings(&mut self, cx: &mut WindowContext) {
         self.update_active_editor(cx, |vim, editor, cx| {
             let state = vim.state();
             editor.set_cursor_shape(state.cursor_shape(), cx);
@@ -823,7 +809,7 @@ impl Vim {
         });
     }
 
-    fn unhook_vim_settings(editor: &mut Editor, cx: &mut ViewContext<Editor>) {
+    pub fn unhook_vim_settings(editor: &mut Editor, cx: &mut ViewContext<Editor>) {
         if editor.mode() == EditorMode::Full {
             editor.set_cursor_shape(CursorShape::Bar, cx);
             editor.set_clip_at_line_ends(false, cx);
@@ -861,7 +847,7 @@ pub enum UseSystemClipboard {
 }
 
 #[derive(Deserialize)]
-struct VimSettings {
+pub struct VimSettings {
     // all vim uses vim clipboard
     // vim always uses system cliupbaord
     // some magic where yy is system and dd is not.
@@ -871,7 +857,7 @@ struct VimSettings {
 }
 
 #[derive(Clone, Default, Serialize, Deserialize, JsonSchema)]
-struct VimSettingsContent {
+pub struct VimSettingsContent {
     pub use_system_clipboard: Option<UseSystemClipboard>,
     pub use_multiline_find: Option<bool>,
     pub use_smartcase_find: Option<bool>,

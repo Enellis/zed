@@ -20,7 +20,7 @@ use crate::{
     object::Object,
     state::{Mode, Operator},
     utils::{copy_selections_content, yank_selections_content},
-    Vim,
+    vim::Vim,
 };
 
 actions!(

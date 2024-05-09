@@ -17,7 +17,7 @@ use crate::{
     object::Object,
     state::{Mode, Operator},
     surrounds::{check_and_move_to_valid_bracket_pair, SurroundsType},
-    Vim,
+    vim::Vim,
 };
 use collections::BTreeSet;
 use editor::scroll::Autoscroll;
@@ -438,7 +438,7 @@ mod test {
         motion,
         state::Mode::{self},
         test::{NeovimBackedTestContext, VimTestContext},
-        VimSettings,
+        vim::VimSettings,
     };
 
     #[gpui::test]

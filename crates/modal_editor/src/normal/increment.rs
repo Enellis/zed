@@ -6,7 +6,7 @@ use language::{Bias, Point};
 use serde::Deserialize;
 use workspace::Workspace;
 
-use crate::{state::Mode, Vim};
+use crate::{state::Mode, vim::Vim};
 
 #[derive(Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]

@@ -3,7 +3,7 @@ use crate::{
     object::Object,
     state::Mode,
     utils::copy_selections_content,
-    Vim,
+    vim::Vim,
 };
 use editor::{
     display_map::{DisplaySnapshot, ToDisplayPoint},

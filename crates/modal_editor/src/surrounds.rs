@@ -2,7 +2,7 @@ use crate::{
     motion::{self, Motion},
     object::Object,
     state::Mode,
-    Vim,
+    vim::Vim,
 };
 use editor::{movement, scroll::Autoscroll, Bias};
 use gpui::WindowContext;

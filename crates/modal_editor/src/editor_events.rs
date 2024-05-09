@@ -1,4 +1,4 @@
-use crate::{insert::NormalBefore, Vim, VimModeSetting};
+use crate::{insert::NormalBefore, vim::Vim, vim::VimModeSetting};
 use editor::{Editor, EditorEvent};
 use gpui::{
     Action, AppContext, BorrowAppContext, Entity, EntityId, View, ViewContext, WindowContext,
@@ -78,7 +78,7 @@ fn released(entity_id: EntityId, cx: &mut AppContext) {
 
 #[cfg(test)]
 mod test {
-    use crate::{test::VimTestContext, Vim};
+    use crate::{test::VimTestContext, vim::Vim};
     use editor::Editor;
     use gpui::{Context, Entity, VisualTestContext};
     use language::Buffer;

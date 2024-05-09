@@ -1,4 +1,4 @@
-use crate::Vim;
+use crate::vim::Vim;
 use editor::{
     display_map::{DisplayRow, ToDisplayPoint},
     scroll::ScrollAmount,
