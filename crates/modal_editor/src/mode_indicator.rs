@@ -1,7 +1,7 @@
 use gpui::{div, Element, Render, Subscription, ViewContext};
 use workspace::{item::ItemHandle, ui::prelude::*, StatusItemView};
 
-use crate::{state::Mode, vim::Vim};
+use crate::{state::Mode, ModalEditor};
 
 /// The ModeIndicator displays the current mode in the status bar.
 pub struct ModeIndicator {
@@ -13,7 +13,7 @@ pub struct ModeIndicator {
 impl ModeIndicator {
     /// Construct a new mode indicator in this window.
     pub fn new(cx: &mut ViewContext<Self>) -> Self {
-        let _subscription = cx.observe_global::<Vim>(|this, cx| this.update_mode(cx));
+        let _subscription = cx.observe_global::<ModalEditor>(|this, cx| this.update_mode(cx));
         let mut this = Self {
             mode: None,
             operators: "".to_string(),
@@ -24,21 +24,23 @@ impl ModeIndicator {
     }
 
     fn update_mode(&mut self, cx: &mut ViewContext<Self>) {
-        // Vim doesn't exist in some tests
-        let Some(vim) = cx.try_global::<Vim>() else {
+        // Modal editor doesn't exist in some tests
+        let Some(modal_editor) = cx.try_global::<ModalEditor>() else {
             return;
         };
 
-        if vim.enabled {
-            self.mode = Some(vim.state().mode);
-            self.operators = self.current_operators_description(&vim);
+        if modal_editor.data.enabled {
+            self.mode = Some(modal_editor.data.state().mode);
+            self.operators = self.current_operators_description(&modal_editor);
         } else {
             self.mode = None;
         }
     }
 
-    fn current_operators_description(&self, vim: &Vim) -> String {
-        vim.state()
+    fn current_operators_description(&self, modal_editor: &ModalEditor) -> String {
+        modal_editor
+            .data
+            .state()
             .operator_stack
             .iter()
             .map(|item| item.id())

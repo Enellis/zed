@@ -60,12 +60,12 @@
   // Currently "alt" or "cmd_or_ctrl"  (also aliased as
   // "cmd" and "ctrl") are supported.
   "multi_cursor_modifier": "alt",
-  // Which method to use for modal editing.
+  // What flavour to use for modal editing.
   // The available options are:
   //
   // 1. None
   // 2. Vim
-  "modal_editing_method": "None",
+  "modal_editor_flavour": "None",
   // Whether to show the informational hover box when moving the mouse
   // over symbols in the editor.
   "hover_popover_enabled": true,

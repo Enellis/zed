@@ -6,6 +6,7 @@ mod test;
 
 mod command;
 mod editor_events;
+mod flavours;
 mod insert;
 mod mode_indicator;
 mod motion;
@@ -25,6 +26,7 @@ use editor::{
     movement::{self, FindRange},
     Anchor, Bias, Editor, EditorEvent, EditorMode, ToPoint,
 };
+use flavours::ModalEditorFlavour;
 use gpui::{
     actions, impl_actions, Action, AppContext, EntityId, FocusableView, Global, KeystrokeEvent,
     Subscription, View, ViewContext, WeakView, WindowContext,
@@ -39,7 +41,7 @@ use serde::Deserialize;
 use serde_derive::Serialize;
 use settings::{update_settings_file, Settings, SettingsSources, SettingsStore};
 use state::{EditorState, Mode, Operator, RecordedSelection, WorkspaceState};
-use std::{ops::Range, sync::Arc};
+use std::{ops::Range, os, sync::Arc};
 use surrounds::{add_surrounds, change_surrounds, delete_surrounds};
 use ui::BorrowAppContext;
 use visual::{visual_block_motion, visual_replace};
@@ -47,24 +49,97 @@ use workspace::{self, Workspace};
 
 use crate::state::ReplayableAction;
 
-trait ModalEditorMethod {}
+#[derive(Default)]
+pub struct ModalEditor {
+    flavour: Box<dyn ModalEditorFlavour>,
+    data: ModalEditorData,
+}
 
 #[derive(Default)]
-struct ModalEditor {
+pub struct ModalEditorData {
     active_editor: Option<WeakView<Editor>>,
     editor_subscription: Option<Subscription>,
+    enabled: bool,
     editor_states: HashMap<EntityId, EditorState>,
+    workspace_state: WorkspaceState,
     default_state: EditorState,
 }
 
-impl Global for ModalEditor {}
+impl ModalEditorData {
+    /// Returns the state of the active editor.
+    pub fn state(&self) -> &EditorState {
+        if let Some(active_editor) = self.active_editor.as_ref() {
+            if let Some(state) = self.editor_states.get(&active_editor.entity_id()) {
+                return state;
+            }
+        }
 
+        &self.default_state
+    }
+
+    /// Updates the state of the active editor.
+    pub fn update_state<T>(&mut self, func: impl FnOnce(&mut EditorState) -> T) -> T {
+        let mut state = self.state().clone();
+        let ret = func(&mut state);
+
+        if let Some(active_editor) = self.active_editor.as_ref() {
+            self.editor_states.insert(active_editor.entity_id(), state);
+        }
+
+        ret
+    }
+
+    fn take_count(&mut self, cx: &mut WindowContext) -> Option<usize> {
+        if self.workspace_state.replaying {
+            return self.workspace_state.recorded_count;
+        }
+
+        let count = if self.state().post_count == None && self.state().pre_count == None {
+            return None;
+        } else {
+            Some(self.update_state(|state| {
+                state.post_count.take().unwrap_or(1) * state.pre_count.take().unwrap_or(1)
+            }))
+        };
+        if self.workspace_state.recording {
+            self.workspace_state.recorded_count = count;
+        }
+        self.sync_modal_editor_settings(cx);
+        count
+    }
+
+    fn update_active_editor<S>(
+        &mut self,
+        cx: &mut WindowContext,
+        update: impl FnOnce(&mut ModalEditorData, &mut Editor, &mut ViewContext<Editor>) -> S,
+    ) -> Option<S> {
+        let editor = self.active_editor.clone()?.upgrade()?;
+        Some(editor.update(cx, |editor, cx| update(self, editor, cx)))
+    }
+
+    fn sync_modal_editor_settings(&mut self, cx: &mut WindowContext) {
+        self.update_active_editor(cx, |modal_editor, editor, cx| {
+            let state = modal_editor.state();
+            editor.set_cursor_shape(state.cursor_shape(), cx);
+            editor.set_clip_at_line_ends(state.clip_at_line_ends(), cx);
+            editor.set_collapse_matches(true);
+            editor.set_input_enabled(!state.vim_controlled());
+            editor.set_autoindent(state.should_autoindent());
+            editor.selections.line_mode = matches!(state.mode, Mode::VisualLine);
+            if editor.is_focused(cx) {
+                editor.set_keymap_context_layer::<Self>(state.keymap_context_layer(), cx);
+            // disables vim if the rename editor is focused,
+            // but not if the command palette is open.
+            } else if editor.focus_handle(cx).contains_focused(cx) {
+                editor.remove_keymap_context_layer::<Self>(cx)
+            }
+        });
+    }
+}
+
+impl Global for ModalEditor {}
 impl ModalEditor {
     const NAMESPACE: &'static str = "modal_editor";
-
-    fn read(cx: &mut AppContext) -> &Self {
-        cx.global::<Self>()
-    }
 
     fn update<F, S>(cx: &mut WindowContext, update: F) -> S
     where
@@ -122,7 +197,7 @@ impl ModalEditor {
         //     self.switch_mode(Mode::Visual, true, cx);
         // }
 
-        self.sync_vim_settings(cx);
+        self.data.sync_modal_editor_settings(cx);
     }
 
     // fn record_insertion(
@@ -226,19 +301,20 @@ impl ModalEditor {
     //     }
     // }
 
-    // /// Stops recording actions immediately rather than waiting until after the
-    // /// next action to stop recording.
-    // ///
-    // /// This doesn't include the current action.
-    // pub fn stop_recording_immediately(&mut self, action: Box<dyn Action>) {
-    //     if self.workspace_state.recording {
-    //         self.workspace_state
-    //             .recorded_actions
-    //             .push(ReplayableAction::Action(action.boxed_clone()));
-    //         self.workspace_state.recording = false;
-    //         self.workspace_state.stop_recording_after_next_action = false;
-    //     }
-    // }
+    /// Stops recording actions immediately rather than waiting until after the
+    /// next action to stop recording.
+    ///
+    /// This doesn't include the current action.
+    pub fn stop_recording_immediately(&mut self, action: Box<dyn Action>) {
+        if self.data.workspace_state.recording {
+            self.data
+                .workspace_state
+                .recorded_actions
+                .push(ReplayableAction::Action(action.boxed_clone()));
+            self.data.workspace_state.recording = false;
+            self.data.workspace_state.stop_recording_after_next_action = false;
+        }
+    }
 
     // /// Explicitly record one action (equivalents to start_recording and stop_recording)
     // pub fn record_current_action(&mut self, cx: &mut WindowContext) {
@@ -246,65 +322,167 @@ impl ModalEditor {
     //     self.stop_recording();
     // }
 
-    /// Returns the state of the active editor.
-    pub fn state(&self) -> &EditorState {
-        if let Some(active_editor) = self.active_editor.as_ref() {
-            if let Some(state) = self.editor_states.get(&active_editor.entity_id()) {
-                return state;
-            }
+    pub fn clear_operator(&mut self, cx: &mut WindowContext) {
+        self.data.take_count(cx);
+        self.data.update_state(|state| state.operator_stack.clear());
+        self.data.sync_modal_editor_settings(cx);
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool, cx: &mut AppContext) {
+        if self.data.enabled == enabled {
+            return;
+        }
+        if !enabled {
+            CommandPaletteInterceptor::update_global(cx, |interceptor, _| {
+                interceptor.clear();
+            });
+            CommandPaletteFilter::update_global(cx, |filter, _| {
+                filter.hide_namespace(Self::NAMESPACE);
+            });
+            *self = Default::default();
+            return;
         }
 
-        &self.default_state
-    }
-
-    fn update_active_editor<S>(
-        &mut self,
-        cx: &mut WindowContext,
-        update: impl FnOnce(&mut ModalEditor, &mut Editor, &mut ViewContext<Editor>) -> S,
-    ) -> Option<S> {
-        let editor = self.active_editor.clone()?.upgrade()?;
-        Some(editor.update(cx, |editor, cx| update(self, editor, cx)))
-    }
-
-    fn sync_vim_settings(&mut self, cx: &mut WindowContext) {
-        self.update_active_editor(cx, |modal_editor, editor, cx| {
-            let state = modal_editor.state();
-            editor.set_cursor_shape(state.cursor_shape(), cx);
-            editor.set_clip_at_line_ends(state.clip_at_line_ends(), cx);
-            editor.set_collapse_matches(true);
-            editor.set_input_enabled(!state.vim_controlled());
-            editor.set_autoindent(state.should_autoindent());
-            editor.selections.line_mode = matches!(state.mode, Mode::VisualLine);
-            if editor.is_focused(cx) {
-                editor.set_keymap_context_layer::<Self>(state.keymap_context_layer(), cx);
-            // disables vim if the rename editor is focused,
-            // but not if the command palette is open.
-            } else if editor.focus_handle(cx).contains_focused(cx) {
-                editor.remove_keymap_context_layer::<Self>(cx)
-            }
+        self.data.enabled = true;
+        CommandPaletteFilter::update_global(cx, |filter, _| {
+            filter.show_namespace(Self::NAMESPACE);
         });
+        CommandPaletteInterceptor::update_global(cx, |interceptor, _| {
+            interceptor.set(Box::new(command::command_interceptor));
+        });
+
+        if let Some(active_window) = cx
+            .active_window()
+            .and_then(|window| window.downcast::<Workspace>())
+        {
+            active_window
+                .update(cx, |workspace, cx| {
+                    let active_editor = workspace.active_item_as::<Editor>(cx);
+                    if let Some(active_editor) = active_editor {
+                        self.activate_editor(active_editor, cx);
+                        self.flavour.switch_mode(
+                            &mut self.data,
+                            self.flavour.normal_mode(),
+                            false,
+                            cx,
+                        );
+                    }
+                })
+                .ok();
+        }
+    }
+
+    fn unhook_vim_settings(editor: &mut Editor, cx: &mut ViewContext<Editor>) {
+        if editor.mode() == EditorMode::Full {
+            editor.set_cursor_shape(CursorShape::Bar, cx);
+            editor.set_clip_at_line_ends(false, cx);
+            editor.set_collapse_matches(false);
+            editor.set_input_enabled(true);
+            editor.set_autoindent(true);
+            editor.selections.line_mode = false;
+        }
+        editor.remove_keymap_context_layer::<Self>(cx)
     }
 }
 
 pub fn init(cx: &mut AppContext) {
     cx.set_global(ModalEditor::default());
     ModalEditorSettings::register(cx);
+
+    cx.observe_keystrokes(observe_keystrokes).detach();
+    editor_events::init(cx);
+
+    // Any time settings change, update vim mode to match. The Vim struct
+    // will be initialized as disabled by default, so we filter its commands
+    // out when starting up.
+    CommandPaletteFilter::update_global(cx, |filter, _| {
+        filter.hide_namespace(ModalEditor::NAMESPACE);
+    });
+    cx.update_global(|modal_editor: &mut ModalEditor, cx: &mut AppContext| {
+        modal_editor.set_enabled(
+            *ModalEditorFlavourSetting::get_global(cx) != ModalEditorFlavourSetting::None,
+            cx,
+        )
+    });
+    cx.observe_global::<SettingsStore>(|cx| {
+        cx.update_global(|modal_editor: &mut ModalEditor, cx: &mut AppContext| {
+            modal_editor.set_enabled(
+                *ModalEditorFlavourSetting::get_global(cx) != ModalEditorFlavourSetting::None,
+                cx,
+            )
+        });
+    })
+    .detach();
+}
+
+/// Called whenever an keystroke is typed so the modal editor can observe all actions
+/// and keystrokes accordingly.
+fn observe_keystrokes(keystroke_event: &KeystrokeEvent, cx: &mut WindowContext) {
+    if let Some(action) = keystroke_event
+        .action
+        .as_ref()
+        .map(|action| action.boxed_clone())
+    {
+        ModalEditor::update(cx, |modal_editor, _| {
+            if modal_editor.data.workspace_state.recording {
+                modal_editor
+                    .data
+                    .workspace_state
+                    .recorded_actions
+                    .push(ReplayableAction::Action(action.boxed_clone()));
+
+                if modal_editor
+                    .data
+                    .workspace_state
+                    .stop_recording_after_next_action
+                {
+                    modal_editor.data.workspace_state.recording = false;
+                    modal_editor
+                        .data
+                        .workspace_state
+                        .stop_recording_after_next_action = false;
+                }
+            }
+        });
+
+        // Keystroke is handled by the vim system, so continue forward
+        if action.name().starts_with("vim::") {
+            return;
+        }
+    } else if cx.has_pending_keystrokes() {
+        return;
+    }
+
+    // Vim::update(cx, |vim, cx| match vim.active_operator() {
+    //     Some(
+    //         Operator::FindForward { .. }
+    //         | Operator::FindBackward { .. }
+    //         | Operator::Replace
+    //         | Operator::AddSurrounds { .. }
+    //         | Operator::ChangeSurrounds { .. }
+    //         | Operator::DeleteSurrounds,
+    //     ) => {}
+    //     Some(_) => {
+    //         vim.clear_operator(cx);
+    //     }
+    //     _ => {}
+    // });
 }
 
 /// Which modal editing method to use (work in progress).
 ///
 /// Default: None
 #[derive(Copy, Clone, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-pub enum ModalEditingMethodSetting {
+pub enum ModalEditorFlavourSetting {
     #[default]
     None,
     Vim,
 }
 
-impl Settings for ModalEditingMethodSetting {
-    const KEY: Option<&'static str> = Some("modal_editing_method");
+impl Settings for ModalEditorFlavourSetting {
+    const KEY: Option<&'static str> = Some("modal_editor_flavour");
 
-    type FileContent = Option<ModalEditingMethodSetting>;
+    type FileContent = Option<ModalEditorFlavourSetting>;
 
     fn load(sources: SettingsSources<Self::FileContent>, _: &mut AppContext) -> Result<Self> {
         if let Some(Some(user_value)) = sources.user.copied() {

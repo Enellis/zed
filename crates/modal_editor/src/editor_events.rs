@@ -1,4 +1,4 @@
-use crate::{insert::NormalBefore, vim::Vim, vim::VimModeSetting};
+use crate::{insert::NormalBefore, ModalEditor, ModalEditorFlavourSetting};
 use editor::{Editor, EditorEvent};
 use gpui::{
     Action, AppContext, BorrowAppContext, Entity, EntityId, View, ViewContext, WindowContext,
@@ -15,12 +15,13 @@ pub fn init(cx: &mut AppContext) {
         })
         .detach();
 
-        let mut enabled = VimModeSetting::get_global(cx).0;
+        let enabled = *ModalEditorFlavourSetting::get_global(cx) != ModalEditorFlavourSetting::None;
         cx.observe_global::<SettingsStore>(move |editor, cx| {
-            if VimModeSetting::get_global(cx).0 != enabled {
-                enabled = VimModeSetting::get_global(cx).0;
-                if !enabled {
-                    Vim::unhook_vim_settings(editor, cx);
+            let new_enabled =
+                *ModalEditorFlavourSetting::get_global(cx) != ModalEditorFlavourSetting::None;
+            if new_enabled != enabled {
+                if !new_enabled {
+                    ModalEditor::unhook_vim_settings(editor, cx);
                 }
             }
         })
@@ -32,26 +33,26 @@ pub fn init(cx: &mut AppContext) {
     .detach();
 }
 fn focused(editor: View<Editor>, cx: &mut WindowContext) {
-    Vim::update(cx, |vim, cx| {
-        if !vim.enabled {
+    ModalEditor::update(cx, |modal_editor, cx| {
+        if !modal_editor.data.enabled {
             return;
         }
-        vim.activate_editor(editor.clone(), cx);
+        modal_editor.activate_editor(editor.clone(), cx);
     });
 }
 
 fn blurred(editor: View<Editor>, cx: &mut WindowContext) {
-    Vim::update(cx, |vim, cx| {
-        if !vim.enabled {
+    ModalEditor::update(cx, |modal_editor, cx| {
+        if !modal_editor.data.enabled {
             return;
         }
-        if let Some(previous_editor) = vim.active_editor.clone() {
-            vim.stop_recording_immediately(NormalBefore.boxed_clone());
+        if let Some(previous_editor) = modal_editor.data.active_editor.clone() {
+            modal_editor.stop_recording_immediately(NormalBefore.boxed_clone());
             if previous_editor
                 .upgrade()
                 .is_some_and(|previous| previous == editor.clone())
             {
-                vim.clear_operator(cx);
+                modal_editor.clear_operator(cx);
             }
         }
         editor.update(cx, |editor, cx| {
@@ -63,16 +64,17 @@ fn blurred(editor: View<Editor>, cx: &mut WindowContext) {
 }
 
 fn released(entity_id: EntityId, cx: &mut AppContext) {
-    cx.update_global(|vim: &mut Vim, _| {
-        if vim
+    cx.update_global(|modal_editor: &mut ModalEditor, _| {
+        if modal_editor
+            .data
             .active_editor
             .as_ref()
             .is_some_and(|previous| previous.entity_id() == entity_id)
         {
-            vim.active_editor = None;
-            vim.editor_subscription = None;
+            modal_editor.data.active_editor = None;
+            modal_editor.data.editor_subscription = None;
         }
-        vim.editor_states.remove(&entity_id)
+        modal_editor.data.editor_states.remove(&entity_id)
     });
 }
 
