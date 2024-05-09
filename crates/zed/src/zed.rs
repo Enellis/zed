@@ -33,7 +33,7 @@ use task::static_source::{StaticSource, TrackedFile};
 use theme::ActiveTheme;
 use workspace::notifications::NotificationId;
 
-use modal_editor::ModalEditorMethodSetting;
+use modal_editor::ModalEditingMethodSetting;
 use terminal_view::terminal_panel::{self, TerminalPanel};
 use util::{
     asset_str,
@@ -633,14 +633,14 @@ pub fn handle_keymap_file_changes(
     cx: &mut AppContext,
 ) {
     BaseKeymap::register(cx);
-    ModalEditorMethodSetting::register(cx);
+    ModalEditingMethodSetting::register(cx);
 
     let (base_keymap_tx, mut base_keymap_rx) = mpsc::unbounded();
     let mut old_base_keymap = *BaseKeymap::get_global(cx);
-    let mut old_modal_editor_method = *ModalEditorMethodSetting::get_global(cx);
+    let mut old_modal_editor_method = *ModalEditingMethodSetting::get_global(cx);
     cx.observe_global::<SettingsStore>(move |cx| {
         let new_base_keymap = *BaseKeymap::get_global(cx);
-        let new_modal_editor_method = *ModalEditorMethodSetting::get_global(cx);
+        let new_modal_editor_method = *ModalEditingMethodSetting::get_global(cx);
 
         if new_base_keymap != old_base_keymap || new_modal_editor_method != old_modal_editor_method
         {
@@ -688,8 +688,8 @@ pub fn load_default_keymap(cx: &mut AppContext) {
     }
 
     KeymapFile::load_asset(DEFAULT_KEYMAP_PATH, cx).unwrap();
-    match *ModalEditorMethodSetting::get_global(cx) {
-        ModalEditorMethodSetting::Vim => KeymapFile::load_asset("keymaps/vim.json", cx).unwrap(),
+    match *ModalEditingMethodSetting::get_global(cx) {
+        ModalEditingMethodSetting::Vim => KeymapFile::load_asset("keymaps/vim.json", cx).unwrap(),
         _ => (),
     }
 

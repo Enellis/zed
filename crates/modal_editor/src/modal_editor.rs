@@ -288,19 +288,23 @@ impl ModalEditor {
 
 pub fn init(cx: &mut AppContext) {
     cx.set_global(ModalEditor::default());
+    ModalEditorSettings::register(cx);
 }
 
+/// Which modal editing method to use (work in progress).
+///
+/// Default: None
 #[derive(Copy, Clone, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-pub enum ModalEditorMethodSetting {
+pub enum ModalEditingMethodSetting {
     #[default]
     None,
     Vim,
 }
 
-impl Settings for ModalEditorMethodSetting {
-    const KEY: Option<&'static str> = Some("modal_editor_method");
+impl Settings for ModalEditingMethodSetting {
+    const KEY: Option<&'static str> = Some("modal_editing_method");
 
-    type FileContent = Option<ModalEditorMethodSetting>;
+    type FileContent = Option<ModalEditingMethodSetting>;
 
     fn load(sources: SettingsSources<Self::FileContent>, _: &mut AppContext) -> Result<Self> {
         if let Some(Some(user_value)) = sources.user.copied() {

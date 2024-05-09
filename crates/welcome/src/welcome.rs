@@ -8,7 +8,7 @@ use gpui::{
     ParentElement, Render, Styled, Subscription, View, ViewContext, VisualContext, WeakView,
     WindowContext,
 };
-use modal_editor::ModalEditorMethodSetting;
+use modal_editor::ModalEditingMethodSetting;
 use settings::{Settings, SettingsStore};
 use std::sync::Arc;
 use ui::{prelude::*, CheckboxWithLabel};
@@ -167,8 +167,8 @@ impl Render for WelcomePage {
                             .child(CheckboxWithLabel::new(
                                 "enable-vim",
                                 Label::new("Enable vim mode"),
-                                if *ModalEditorMethodSetting::get_global(cx)
-                                    == ModalEditorMethodSetting::Vim
+                                if *ModalEditingMethodSetting::get_global(cx)
+                                    == ModalEditingMethodSetting::Vim
                                 {
                                     ui::Selection::Selected
                                 } else {
@@ -177,14 +177,14 @@ impl Render for WelcomePage {
                                 cx.listener(move |this, selection, cx| {
                                     this.telemetry
                                         .report_app_event("welcome page: toggle vim".to_string());
-                                    this.update_settings::<ModalEditorMethodSetting>(
+                                    this.update_settings::<ModalEditingMethodSetting>(
                                         selection,
                                         cx,
                                         |setting, value| {
                                             *setting = Some(if value {
-                                                ModalEditorMethodSetting::Vim
+                                                ModalEditingMethodSetting::Vim
                                             } else {
-                                                ModalEditorMethodSetting::None
+                                                ModalEditingMethodSetting::None
                                             })
                                         },
                                     );
