@@ -60,8 +60,12 @@
   // Currently "alt" or "cmd_or_ctrl"  (also aliased as
   // "cmd" and "ctrl") are supported.
   "multi_cursor_modifier": "alt",
-  // Whether to enable vim modes and key bindings.
-  "vim_mode": false,
+  // Which method to use for modal editing.
+  // The available options are:
+  //
+  // 1. None
+  // 2. Vim
+  "modal_editing_method": "None",
   // Whether to show the informational hover box when moving the mouse
   // over symbols in the editor.
   "hover_popover_enabled": true,
@@ -660,8 +664,8 @@
     //     }
     // }
   },
-  // Vim settings
-  "vim": {
+  // Modal editor settings
+  "modal_editor": {
     "use_system_clipboard": "always",
     "use_multiline_find": false,
     "use_smartcase_find": false
