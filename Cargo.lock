@@ -6297,6 +6297,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "modal_editor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-compat",
+ "async-trait",
+ "collections",
+ "command_palette",
+ "command_palette_hooks",
+ "editor",
+ "futures 0.3.28",
+ "gpui",
+ "indoc",
+ "itertools 0.11.0",
+ "language",
+ "log",
+ "lsp",
+ "multi_buffer",
+ "nvim-rs",
+ "parking_lot",
+ "regex",
+ "release_channel",
+ "schemars",
+ "search",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "settings",
+ "tokio",
+ "ui",
+ "util",
+ "workspace",
+ "zed_actions",
+]
+
+[[package]]
 name = "multi_buffer"
 version = "0.1.0"
 dependencies = [
@@ -11334,42 +11370,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "vim"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-compat",
- "async-trait",
- "collections",
- "command_palette",
- "command_palette_hooks",
- "editor",
- "futures 0.3.28",
- "gpui",
- "indoc",
- "itertools 0.11.0",
- "language",
- "log",
- "lsp",
- "multi_buffer",
- "nvim-rs",
- "parking_lot",
- "regex",
- "release_channel",
- "schemars",
- "search",
- "serde",
- "serde_derive",
- "serde_json",
- "settings",
- "tokio",
- "ui",
- "util",
- "workspace",
- "zed_actions",
-]
-
-[[package]]
 name = "vscode_theme"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12043,6 +12043,7 @@ dependencies = [
  "gpui",
  "inline_completion_button",
  "install_cli",
+ "modal_editor",
  "picker",
  "project",
  "schemars",
@@ -12051,7 +12052,6 @@ dependencies = [
  "theme_selector",
  "ui",
  "util",
- "vim",
  "workspace",
 ]
 
@@ -12954,6 +12954,7 @@ dependencies = [
  "markdown_preview",
  "menu",
  "mimalloc",
+ "modal_editor",
  "nix 0.28.0",
  "node_runtime",
  "notifications",
@@ -12985,7 +12986,6 @@ dependencies = [
  "urlencoding",
  "util",
  "uuid",
- "vim",
  "welcome",
  "winresource",
  "workspace",

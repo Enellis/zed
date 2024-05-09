@@ -8,10 +8,10 @@ use gpui::{
     ParentElement, Render, Styled, Subscription, View, ViewContext, VisualContext, WeakView,
     WindowContext,
 };
+use modal_editor::VimModeSetting;
 use settings::{Settings, SettingsStore};
 use std::sync::Arc;
 use ui::{prelude::*, CheckboxWithLabel};
-use vim::VimModeSetting;
 use workspace::{
     dock::DockPosition,
     item::{Item, ItemEvent, TabContentParams},

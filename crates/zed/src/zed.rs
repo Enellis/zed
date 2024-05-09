@@ -33,6 +33,7 @@ use task::static_source::{StaticSource, TrackedFile};
 use theme::ActiveTheme;
 use workspace::notifications::NotificationId;
 
+use modal_editor::VimModeSetting;
 use terminal_view::terminal_panel::{self, TerminalPanel};
 use util::{
     asset_str,
@@ -40,7 +41,6 @@ use util::{
     ResultExt,
 };
 use uuid::Uuid;
-use vim::VimModeSetting;
 use welcome::BaseKeymap;
 use workspace::{
     create_and_open_local_file, notifications::simple_message_notification::MessageNotification,
@@ -137,7 +137,7 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut AppContext) {
             activity_indicator::ActivityIndicator::new(workspace, app_state.languages.clone(), cx);
         let active_buffer_language =
             cx.new_view(|_| language_selector::ActiveBufferLanguage::new(workspace));
-        let vim_mode_indicator = cx.new_view(|cx| vim::ModeIndicator::new(cx));
+        let vim_mode_indicator = cx.new_view(|cx| modal_editor::ModeIndicator::new(cx));
         let cursor_position =
             cx.new_view(|_| go_to_line::cursor_position::CursorPosition::new(workspace));
         workspace.status_bar().update(cx, |status_bar, cx| {
