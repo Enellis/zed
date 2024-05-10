@@ -108,7 +108,7 @@ fn increment(vim: &mut Vim, mut delta: i32, step: i32, cx: &mut WindowContext) {
             })
         });
     });
-    vim.switch_mode(Mode::Normal, true, cx)
+    vim.switch_mode_to_normal(true, cx)
 }
 
 fn find_number(

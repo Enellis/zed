@@ -24,7 +24,7 @@ fn normal_before(_: &mut Workspace, action: &NormalBefore, cx: &mut ViewContext<
                     });
                 });
             });
-            vim.switch_mode(Mode::Normal, false, cx);
+            vim.switch_mode_to_normal(false, cx);
             false
         } else {
             true

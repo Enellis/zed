@@ -12,6 +12,7 @@ use workspace::searchable::Direction;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Mode {
     Normal,
+    HelixNormal,
     Insert,
     Replace,
     Visual,
@@ -23,6 +24,7 @@ impl Display for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Mode::Normal => write!(f, "NORMAL"),
+            Mode::HelixNormal => write!(f, "HELIXNORMAL"),
             Mode::Insert => write!(f, "INSERT"),
             Mode::Replace => write!(f, "REPLACE"),
             Mode::Visual => write!(f, "VISUAL"),
@@ -36,7 +38,7 @@ impl Mode {
     pub fn is_visual(&self) -> bool {
         match self {
             Mode::Normal | Mode::Insert | Mode::Replace => false,
-            Mode::Visual | Mode::VisualLine | Mode::VisualBlock => true,
+            Mode::HelixNormal | Mode::Visual | Mode::VisualLine | Mode::VisualBlock => true,
         }
     }
 }
@@ -165,6 +167,7 @@ impl EditorState {
                     CursorShape::Underscore
                 }
             }
+            Mode::HelixNormal => CursorShape::Block,
             Mode::Replace => CursorShape::Underscore,
             Mode::Visual | Mode::VisualLine | Mode::VisualBlock => CursorShape::Block,
             Mode::Insert => CursorShape::Bar,
@@ -191,9 +194,12 @@ impl EditorState {
 
     pub fn clip_at_line_ends(&self) -> bool {
         match self.mode {
-            Mode::Insert | Mode::Visual | Mode::VisualLine | Mode::VisualBlock | Mode::Replace => {
-                false
-            }
+            Mode::HelixNormal
+            | Mode::Insert
+            | Mode::Visual
+            | Mode::VisualLine
+            | Mode::VisualBlock
+            | Mode::Replace => false,
             Mode::Normal => true,
         }
     }
@@ -208,6 +214,7 @@ impl EditorState {
             "vim_mode",
             match self.mode {
                 Mode::Normal => "normal",
+                Mode::HelixNormal => "helix_normal",
                 Mode::Visual | Mode::VisualLine | Mode::VisualBlock => "visual",
                 Mode::Insert => "insert",
                 Mode::Replace => "replace",

@@ -66,7 +66,7 @@ where
                             cursor_positions.push(selection.start..selection.start);
                         }
                     }
-                    Mode::Insert | Mode::Normal | Mode::Replace => {
+                    Mode::HelixNormal | Mode::Insert | Mode::Normal | Mode::Replace => {
                         let start = selection.start;
                         let mut end = start;
                         for _ in 0..count {
@@ -99,7 +99,7 @@ where
                 })
             });
         });
-        vim.switch_mode(Mode::Normal, true, cx)
+        vim.switch_mode_to_normal(true, cx)
     })
 }
 

@@ -289,7 +289,7 @@ pub fn move_to_internal(
         });
 
         if vim.state().mode.is_visual() {
-            vim.switch_mode(Mode::Normal, false, cx)
+            vim.switch_mode_to_normal(false, cx)
         }
     });
 }

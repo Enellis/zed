@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use collections::HashMap;
 use editor::{
+    actions::Delete,
     display_map::{DisplaySnapshot, ToDisplayPoint},
     movement,
     scroll::Autoscroll,
@@ -336,7 +337,7 @@ pub fn visual_object(object: Object, cx: &mut WindowContext) {
 fn toggle_mode(mode: Mode, cx: &mut ViewContext<Workspace>) {
     Vim::update(cx, |vim, cx| {
         if vim.state().mode == mode {
-            vim.switch_mode(Mode::Normal, false, cx);
+            vim.switch_mode_to_normal(false, cx);
         } else {
             vim.switch_mode(mode, false, cx);
         }
@@ -357,44 +358,11 @@ pub fn other_end(_: &mut Workspace, _: &OtherEnd, cx: &mut ViewContext<Workspace
 
 pub fn delete(vim: &mut Vim, cx: &mut WindowContext) {
     vim.update_active_editor(cx, |vim, editor, cx| {
-        let mut original_columns: HashMap<_, _> = Default::default();
         let line_mode = editor.selections.line_mode;
-
-        editor.transact(cx, |editor, cx| {
-            editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
-                s.move_with(|map, selection| {
-                    if line_mode {
-                        let mut position = selection.head();
-                        if !selection.reversed {
-                            position = movement::left(map, position);
-                        }
-                        original_columns.insert(selection.id, position.to_point(map).column);
-                    }
-                    selection.goal = SelectionGoal::None;
-                });
-            });
-            copy_selections_content(vim, editor, line_mode, cx);
-            editor.insert("", cx);
-
-            // Fixup cursor position after the deletion
-            editor.set_clip_at_line_ends(true, cx);
-            editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
-                s.move_with(|map, selection| {
-                    let mut cursor = selection.head().to_point(map);
-
-                    if let Some(column) = original_columns.get(&selection.id) {
-                        cursor.column = *column
-                    }
-                    let cursor = map.clip_point(cursor.to_display_point(map), Bias::Left);
-                    selection.collapse_to(cursor, selection.goal)
-                });
-                if vim.state().mode == Mode::VisualBlock {
-                    s.select_anchors(vec![s.first_anchor()])
-                }
-            });
-        })
+        copy_selections_content(vim, editor, line_mode, cx);
+        editor.delete(&Delete {}, cx);
     });
-    vim.switch_mode(Mode::Normal, true, cx);
+    vim.switch_mode_to_normal(true, cx);
 }
 
 pub fn yank(vim: &mut Vim, cx: &mut WindowContext) {
@@ -413,7 +381,7 @@ pub fn yank(vim: &mut Vim, cx: &mut WindowContext) {
             }
         });
     });
-    vim.switch_mode(Mode::Normal, true, cx);
+    vim.switch_mode_to_normal(true, cx);
 }
 
 pub(crate) fn visual_replace(text: Arc<str>, cx: &mut WindowContext) {
@@ -455,7 +423,7 @@ pub(crate) fn visual_replace(text: Arc<str>, cx: &mut WindowContext) {
                 editor.change_selections(None, cx, |s| s.select_ranges(stable_anchors));
             });
         });
-        vim.switch_mode(Mode::Normal, false, cx);
+        vim.switch_mode_to_normal(false, cx);
     });
 }
 

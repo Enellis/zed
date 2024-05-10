@@ -43,7 +43,7 @@ pub(crate) fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>
     workspace.register_action(|_: &mut Workspace, _: &EndRepeat, cx| {
         Vim::update(cx, |vim, cx| {
             vim.workspace_state.replaying = false;
-            vim.switch_mode(Mode::Normal, false, cx)
+            vim.switch_mode_to_normal(false, cx)
         });
     });
 

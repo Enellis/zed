@@ -6,6 +6,7 @@ mod test;
 mod change_list;
 mod command;
 mod editor_events;
+mod helix;
 mod insert;
 mod mode_indicator;
 mod motion;
@@ -428,6 +429,18 @@ impl Vim {
         self.stop_recording();
     }
 
+    fn switch_mode_to_normal(&mut self, leave_selections: bool, cx: &mut WindowContext) {
+        self.switch_mode(
+            if self.modal_editor == ModalEditorSetting::Vim {
+                Mode::Normal
+            } else {
+                Mode::HelixNormal
+            },
+            leave_selections,
+            cx,
+        );
+    }
+
     fn switch_mode(&mut self, mode: Mode, leave_selections: bool, cx: &mut WindowContext) {
         let state = self.state();
         let last_mode = state.mode;
@@ -639,7 +652,7 @@ impl Vim {
                 }
             });
         });
-        self.switch_mode(Mode::Normal, true, cx)
+        self.switch_mode_to_normal(true, cx);
     }
 
     fn transaction_ended(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
@@ -662,7 +675,10 @@ impl Vim {
                     });
                 }
             }
-        } else if state.mode == Mode::Normal && newest.start != newest.end {
+        } else if self.modal_editor == ModalEditorSetting::Vim
+            && state.mode == Mode::Normal
+            && newest.start != newest.end
+        {
             if matches!(newest.goal, SelectionGoal::HorizontalRange { .. }) {
                 self.switch_mode(Mode::VisualBlock, false, cx);
             } else {
@@ -673,7 +689,7 @@ impl Vim {
             && !is_multicursor
             && [Mode::Visual, Mode::VisualLine, Mode::VisualBlock].contains(&state.mode)
         {
-            self.switch_mode(Mode::Normal, true, cx);
+            self.switch_mode_to_normal(true, cx);
             is_visual = false;
         }
 
@@ -794,7 +810,7 @@ impl Vim {
                     let active_editor = workspace.active_item_as::<Editor>(cx);
                     if let Some(active_editor) = active_editor {
                         self.activate_editor(active_editor, cx);
-                        self.switch_mode(Mode::Normal, false, cx);
+                        self.switch_mode_to_normal(false, cx);
                     }
                 })
                 .ok();

@@ -25,7 +25,7 @@ impl_actions!(vim, [GoToLine]);
 pub fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
     workspace.register_action(|_: &mut Workspace, action: &GoToLine, cx| {
         Vim::update(cx, |vim, cx| {
-            vim.switch_mode(Mode::Normal, false, cx);
+            vim.switch_mode_to_normal(false, cx);
             move_cursor(vim, Motion::StartOfDocument, Some(action.line as usize), cx);
         });
     });

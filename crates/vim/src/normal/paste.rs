@@ -221,7 +221,7 @@ fn paste(_: &mut Workspace, action: &Paste, cx: &mut ViewContext<Workspace>) {
                 })
             });
         });
-        vim.switch_mode(Mode::Normal, true, cx);
+        vim.switch_mode_to_normal(true, cx);
     });
 }
 

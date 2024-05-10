@@ -20,8 +20,8 @@ use crate::{
     Vim,
 };
 use collections::BTreeSet;
-use editor::scroll::Autoscroll;
 use editor::Bias;
+use editor::{movement, scroll::Autoscroll};
 use gpui::{actions, ViewContext, WindowContext};
 use language::{Point, SelectionGoal};
 use log::error;
@@ -132,7 +132,7 @@ pub(crate) fn register(workspace: &mut Workspace, cx: &mut ViewContext<Workspace
                 })
             });
             if vim.state().mode.is_visual() {
-                vim.switch_mode(Mode::Normal, false, cx)
+                vim.switch_mode_to_normal(false, cx)
             }
         });
     });
@@ -144,7 +144,7 @@ pub(crate) fn register(workspace: &mut Workspace, cx: &mut ViewContext<Workspace
                 editor.transact(cx, |editor, cx| editor.indent(&Default::default(), cx))
             });
             if vim.state().mode.is_visual() {
-                vim.switch_mode(Mode::Normal, false, cx)
+                vim.switch_mode_to_normal(false, cx)
             }
         });
     });
@@ -156,7 +156,7 @@ pub(crate) fn register(workspace: &mut Workspace, cx: &mut ViewContext<Workspace
                 editor.transact(cx, |editor, cx| editor.outdent(&Default::default(), cx))
             });
             if vim.state().mode.is_visual() {
-                vim.switch_mode(Mode::Normal, false, cx)
+                vim.switch_mode_to_normal(false, cx)
             }
         });
     });
@@ -248,6 +248,8 @@ pub(crate) fn move_cursor(
 
 fn insert_after(_: &mut Workspace, _: &InsertAfter, cx: &mut ViewContext<Workspace>) {
     Vim::update(cx, |vim, cx| {
+        collapse_to_left(cx, vim);
+
         vim.start_recording(cx);
         vim.switch_mode(Mode::Insert, false, cx);
         vim.update_active_editor(cx, |_, editor, cx| {
@@ -258,8 +260,27 @@ fn insert_after(_: &mut Workspace, _: &InsertAfter, cx: &mut ViewContext<Workspa
     });
 }
 
+fn collapse_to_left(cx: &mut WindowContext, vim: &mut Vim) {
+    vim.update_active_editor(cx, |_vim, editor, cx| {
+        editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+            s.move_with(|map, selection| {
+                if !selection.reversed && selection.start != selection.end {
+                    let current_head = selection.head();
+                    let new_head = movement::left(map, current_head);
+
+                    selection.start = new_head;
+                }
+
+                selection.end = selection.start;
+            });
+        });
+    });
+}
+
 fn insert_before(_: &mut Workspace, _: &InsertBefore, cx: &mut ViewContext<Workspace>) {
     Vim::update(cx, |vim, cx| {
+        collapse_to_left(cx, vim);
+
         vim.start_recording(cx);
         vim.switch_mode(Mode::Insert, false, cx);
     });

@@ -114,7 +114,7 @@ pub fn add_surrounds(text: Arc<str>, target: SurroundsType, cx: &mut WindowConte
                 });
             });
         });
-        vim.switch_mode(Mode::Normal, false, cx);
+        vim.switch_mode_to_normal(false, cx);
     });
 }
 

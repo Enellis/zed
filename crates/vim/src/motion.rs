@@ -14,12 +14,13 @@ use std::ops::Range;
 use workspace::Workspace;
 
 use crate::{
+    helix::helix_normal_motion,
     normal::{mark, normal_motion},
     state::{Mode, Operator},
     surrounds::SurroundsType,
     utils::coerce_punctuation,
     visual::visual_motion,
-    Vim,
+    ModalEditorSetting, Vim,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -399,7 +400,7 @@ pub(crate) fn search_motion(m: Motion, cx: &mut WindowContext) {
     } = &m
     {
         match Vim::read(cx).state().mode {
-            Mode::Visual | Mode::VisualLine | Mode::VisualBlock => {
+            Mode::HelixNormal | Mode::Visual | Mode::VisualLine | Mode::VisualBlock => {
                 if !prior_selections.is_empty() {
                     Vim::update(cx, |vim, cx| {
                         vim.update_active_editor(cx, |_, editor, cx| {
@@ -441,6 +442,21 @@ pub(crate) fn motion(motion: Motion, cx: &mut WindowContext) {
                 normal_motion(motion.clone(), active_operator.clone(), count, cx)
             }
         }
+        Mode::HelixNormal => match motion {
+            Motion::Left | Motion::Right | Motion::Up { .. } | Motion::Down { .. } => {
+                normal_motion(motion.clone(), active_operator.clone(), count, cx)
+            }
+            Motion::NextWordStart { .. }
+            | Motion::NextWordEnd { .. }
+            | Motion::PreviousWordStart { .. }
+            | Motion::PreviousWordEnd { .. } => {
+                let count = count.unwrap_or(1);
+                for _ in 0..count {
+                    helix_normal_motion(motion.clone(), None, cx)
+                }
+            }
+            _ => helix_normal_motion(motion.clone(), count, cx),
+        },
         Mode::Visual | Mode::VisualLine | Mode::VisualBlock => {
             visual_motion(motion.clone(), count, cx)
         }

@@ -77,7 +77,7 @@ pub fn change_motion(vim: &mut Vim, motion: Motion, times: Option<usize>, cx: &m
     if motion_succeeded {
         vim.switch_mode(Mode::Insert, false, cx)
     } else {
-        vim.switch_mode(Mode::Normal, false, cx)
+        vim.switch_mode_to_normal(false, cx)
     }
 }
 
@@ -102,7 +102,7 @@ pub fn change_object(vim: &mut Vim, object: Object, around: bool, cx: &mut Windo
     if objects_found {
         vim.switch_mode(Mode::Insert, false, cx);
     } else {
-        vim.switch_mode(Mode::Normal, false, cx);
+        vim.switch_mode_to_normal(false, cx);
     }
 }
 
