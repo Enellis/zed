@@ -4,6 +4,7 @@
 #[cfg(test)]
 mod test;
 
+mod change_list;
 mod command;
 mod editor_events;
 mod flavours;

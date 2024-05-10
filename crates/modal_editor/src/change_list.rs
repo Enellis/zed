@@ -3,7 +3,7 @@ use gpui::{actions, View};
 use ui::{ViewContext, WindowContext};
 use workspace::Workspace;
 
-use crate::{state::Mode, Vim};
+use crate::{state::Mode, vim::Vim};
 
 actions!(vim, [ChangeListOlder, ChangeListNewer]);
 

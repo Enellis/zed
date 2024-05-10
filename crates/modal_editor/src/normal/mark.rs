@@ -11,7 +11,7 @@ use language::SelectionGoal;
 
 use crate::{
     motion::{self, Motion},
-    Vim,
+    vim::Vim,
 };
 
 pub fn create_mark(vim: &mut Vim, text: Arc<str>, tail: bool, cx: &mut WindowContext) {
